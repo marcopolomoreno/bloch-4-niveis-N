@@ -34,7 +34,7 @@ const   gamma22 = 2*pi*5e6,
         gamma24 = 0.5*(gamma22 + gamma44),
         gamma34 = 0.5*gamma44;
 
-let A = 0.2*gamma22,
+let A = 1*gamma22,
     B = 0.1*gamma22;
 
 function bloch(rho11, rho22, rho33, rho44, a12, b12, a13, b13, a14, b14, a23, b23, a24, b24, a34, b34, j)
@@ -81,7 +81,7 @@ function bloch(rho11, rho22, rho33, rho44, a12, b12, a13, b13, a14, b14, a23, b2
     if (j===15) return -gamma34*a34 - delta43*b34 - B*b24;
 
     //b34
-    if (j===16) return -gamma34*b34 + delta43*a34 + B*a24 - (rho44-rho33)*A;
+    if (j===16) return -gamma34*b34 + delta43*a34 + B*a24 - (rho33-rho44)*A;
 }
 
 let rho11, rho22, rho33, rho44, soma;
@@ -101,7 +101,7 @@ a12 = 0; b12 = 0; a13 = 0; b13 = 0; a14 = 0; b14 = 0; a23 = 0; b23 = 0; a24 = 0;
 
 console.log(t*1e9, rho11, rho22, rho33, rho44, a12, b12, a13, b13, a14, b14, a23, b23, a24, b24, a34, b34)
 
-for (var k=0; k<=20e6; k++)
+for (var k=0; k<=10e6; k++)
 {
     for (var j=1; j<=16; j++)
         k1[j] = bloch(rho11, rho22, rho33, rho44, a12, b12, a13, b13, a14, b14, a23, b23, a24, b24, a34, b34, j);
@@ -146,9 +146,9 @@ for (var k=0; k<=20e6; k++)
 
     t = t + h;
 
-    if (k%1000 === 0)
+    if (k%10000 === 0)
     {
-        console.log(t*1e9, rho11, rho22, rho33, rho44, soma, a12, b12, a13, b13, a14, b14, a23, b23, a24, b24, a34, b34)
+        console.log(t*1e9, rho11, rho22, rho33, rho44, soma)
         dados = dados + 1e9*t + " " + rho11 + " " + rho22 + " " + rho33 + " " + rho44 + " " + soma + " " + a12 + " " + b12 + " " + a13 + " " + b13 + " " + a14 + " " + b14 + " " + a23 + " " + b23 + " " + a24 + " " + b24 + " " + a34 + " " + b34 + "\n"
     }
 }
