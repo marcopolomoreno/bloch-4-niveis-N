@@ -18,30 +18,30 @@ function escreverArquivo(caminho,texto){
 
 dados = "delta rho11 rho22 rho33 rho44 soma a12 b12 a13 b13 a14 b14 a23 b23 a24 b24 a34 b34\n" + "ns\n"
 
-const pi = Math.PI;
 
-let delta21 = 0,
-    delta31 = 0,
-    delta41 = 0,
-    delta32 = 0,
-    delta42 = 0,
-    delta43 = 0;
-
-const   gamma22 = 2*pi*5e6,
-        gamma44 = 2*pi*5e6,
-        gamma12 = 0.5*gamma22,
-        gamma13 = 0,
-        gamma14 = 0.5*gamma44,
-        gamma23 = 0.5*gamma22,
-        gamma24 = 0.5*(gamma22 + gamma44),
-        gamma34 = 0.5*gamma44;
-
-let A = 1*gamma22,
-    B = 0.1*gamma22;
-
-
-function bloch(rho11, rho22, rho33, rho44, a12, b12, a13, b13, a14, b14, a23, b23, a24, b24, a34, b34, j)
+gpu.addFunction(function bloch(rho11, rho22, rho33, rho44, a12, b12, a13, b13, a14, b14, a23, b23, a24, b24, a34, b34, j)
 {
+    const pi = Math.PI;
+
+    let delta21 = 0,
+        delta31 = 0,
+        delta41 = 0,
+        delta32 = 0,
+        delta42 = 0,
+        delta43 = 0;
+
+    const gamma22 = 2*pi*5e6,
+          gamma44 = 2*pi*5e6,
+          gamma12 = 0.5*gamma22,
+          gamma13 = 0,
+          gamma14 = 0.5*gamma44,
+          gamma23 = 0.5*gamma22,
+          gamma24 = 0.5*(gamma22 + gamma44),
+          gamma34 = 0.5*gamma44;
+
+    let A = 1*gamma22,
+        B = 0.1*gamma22;
+
     if (j===1)  return 2*A*b12 + 0.5*gamma22*rho22 + 0.5*gamma44*rho44;
 
     if (j===2)  return -2*A*b12 + 2*B*b23 - gamma22*rho22;
@@ -85,47 +85,13 @@ function bloch(rho11, rho22, rho33, rho44, a12, b12, a13, b13, a14, b14, a23, b2
 
     //b34
     if (j===16) return -gamma34*b34 + delta43*a34 + B*a24 - (rho33-rho44)*A;
-}
-
-let rho11, rho22, rho33, rho44, soma;
-let a12, b12, a13, b13, a14, b14, a23, b23, a24, b24, a34, b34;
-let t = 0;
-let h = 0.1e-12
-
-let k1 = [], k2 = [], k3 = [], k4 = [];
-
-//Condições iniciais
-rho11 = 0.5;
-rho22 = 0;
-rho33 = 0.5;
-rho44 = 0;
-
-a12 = 0; b12 = 0; a13 = 0; b13 = 0; a14 = 0; b14 = 0; a23 = 0; b23 = 0; a24 = 0; b24 = 0; a34 = 0; b34 = 0;
-
-//console.log(t*1e9, rho11, rho22, rho33, rho44, a12, b12, a13, b13, a14, b14, a23, b23, a24, b24, a34, b34)
+})
 
 
 
-
-
-const settings = {
-    output: [1000]
-};
-
-const kernel = gpu.createKernel(function() {
-    //solucaoTempo()
-    return this.thread.x;
-}, settings);
-
-console.log( kernel() )
-
-
-//solucaoTempo()
-
-
-function solucaoTempo()
+/* function solucaoTempo()
 {
-    for (var k=0; k<=10e6; k++)
+    for (var k=0; k<=1000; k++)
     {
         for (var j=1; j<=16; j++)
             k1[j] = bloch(rho11, rho22, rho33, rho44, a12, b12, a13, b13, a14, b14, a23, b23, a24, b24, a34, b34, j);
@@ -176,6 +142,112 @@ function solucaoTempo()
             dados = dados + 1e9*t + " " + rho11 + " " + rho22 + " " + rho33 + " " + rho44 + " " + soma + " " + a12 + " " + b12 + " " + a13 + " " + b13 + " " + a14 + " " + b14 + " " + a23 + " " + b23 + " " + a24 + " " + b24 + " " + a34 + " " + b34 + "\n"
         }
     }
-}
+} */
 
-escreverArquivo(path, dados)
+
+
+let rho11 = [], rho22 = [], rho33 = [], rho44 = [], soma;
+let a12 = [], b12 = [], a13 = [], b13 = [], a14 = [], b14 = [];
+let a23 = [], b23 = [], a24 = [], b24 = [], a34 = [], b34 = [];
+let t = 0;
+let h = 0.1e-12
+
+const N = 1000;
+
+//Condições iniciais
+//put 0.5 value in all element of rho11 vector
+rho11 = new Array(N).fill(0.5);
+rho22 = new Array(N).fill(0);
+rho33 = new Array(N).fill(0.5);
+rho44 = new Array(N).fill(0);
+
+a12 = new Array(N).fill(0);
+b12 = new Array(N).fill(0);
+a13 = new Array(N).fill(0);
+b13 = new Array(N).fill(0);
+a14 = new Array(N).fill(0);
+b14 = new Array(N).fill(0);
+a23 = new Array(N).fill(0);
+b23 = new Array(N).fill(0);
+a24 = new Array(N).fill(0);
+b24 = new Array(N).fill(0);
+a34 = new Array(N).fill(0);
+b34 = new Array(N).fill(0);
+
+
+//console.log(t*1e9, rho11, rho22, rho33, rho44, a12, b12, a13, b13, a14, b14, a23, b23, a24, b24, a34, b34)
+
+
+const kernel = gpu.createKernel(function(rho11, rho22, rho33, rho44, a12, b12, a13, b13, a14, b14, a23, b23, a24, b24, a34, b34)
+{
+    const i = this.thread.x;
+
+    let k1 = [0, 0, 0, 0]
+
+    //k1[0] = 2
+    k1[1] = 2
+
+    
+    //emptyArray = emptyArray.push(5)
+
+
+
+/*     for (var k=0; k<=1000; k++)
+    {
+        for (var j=1; j<=16; j++)
+            k1[j] = bloch(rho11[i], rho22[i], rho33[i], rho44[i], a12[i], b12[i], a13[i], b13[i], 
+                        a14[i], b14[i], a23[i], b23[i], a24[i], b24[i], a34[i], b34[i], j);
+    
+        for (var j=1; j<=16; j++)
+            k2[j] = bloch(rho11[i] + 0.5*h*k1[1], rho22[i] + 0.5*h*k1[2], rho33[i] + 0.5*h*k1[3], rho44[i] + 0.5*h*k1[4], 
+                            a12[i] + 0.5*h*k1[5],  b12[i] + 0.5*h*k1[6],  a13[i] + 0.5*h*k1[7],  b13[i] + 0.5*h*k1[8], 
+                            a14[i] + 0.5*h*k1[9],  b14[i] + 0.5*h*k1[10], a23[i] + 0.5*h*k1[11], b23[i] + 0.5*h*k1[12], 
+                            a24[i] + 0.5*h*k1[13], b24[i] + 0.5*h*k1[14], a34[i] + 0.5*h*k1[15], b34[i] + 0.5*h*k1[16], j);
+    
+        for (var j=1; j<=16; j++)
+            k3[j] = bloch(rho11[i] + 0.5*h*k2[1], rho22[i] + 0.5*h*k2[2], rho33[i] + 0.5*h*k2[3], rho44[i] + 0.5*h*k2[4],
+                            a12[i] + 0.5*h*k2[5],  b12[i] + 0.5*h*k2[6],  a13[i] + 0.5*h*k2[7],  b13[i] + 0.5*h*k2[8], 
+                            a14[i] + 0.5*h*k2[9],  b14[i] + 0.5*h*k2[10], a23[i] + 0.5*h*k2[11], b23[i] + 0.5*h*k2[12], 
+                            a24[i] + 0.5*h*k2[13], b24[i] + 0.5*h*k2[14], a34[i] + 0.5*h*k2[15], b34[i] + 0.5*h*k2[16], j);
+    
+        for (var j=1; j<=16; j++)
+            k4[j] = bloch(rho11[i] + h*k3[1], rho22[i] + h*k3[2], rho33[i] + h*k3[3], rho44[i] + h*k3[4],
+                            a12[i] + h*k3[5],  b12[i] + h*k3[6],  a13[i] + h*k3[7],  b13[i] + h*k3[8], 
+                            a14[i] + h*k3[9],  b14[i] + h*k3[10], a23[i] + h*k3[11], b23[i] + h*k3[12], 
+                            a24[i] + h*k3[13], b24[i] + h*k3[14], a34[i] + h*k3[15], b34[i] + h*k3[16], j);
+    
+        rho11[i] = rho11[i] + (h/6)*(k1[1] + 2*k2[1] + 2*k3[1] + k4[1]);
+        rho22[i] = rho22[i] + (h/6)*(k1[2] + 2*k2[2] + 2*k3[2] + k4[2]);
+        rho33[i] = rho33[i] + (h/6)*(k1[3] + 2*k2[3] + 2*k3[3] + k4[3]);
+        rho44[i] = rho44[i] + (h/6)*(k1[4] + 2*k2[4] + 2*k3[4] + k4[4]);
+    
+        //soma = rho11[i] + rho22[i] + rho33[i] + rho44[i];
+    
+        a12[i] = a12[i] + (h/6)*(k1[5]  + 2*k2[5]  + 2*k3[5]  + k4[5]);
+        b12[i] = b12[i] + (h/6)*(k1[6]  + 2*k2[6]  + 2*k3[6]  + k4[6]);
+        a13[i] = a13[i] + (h/6)*(k1[7]  + 2*k2[7]  + 2*k3[7]  + k4[7]);
+        b13[i] = b13[i] + (h/6)*(k1[8]  + 2*k2[8]  + 2*k3[8]  + k4[8]);
+        a14[i] = a14[i] + (h/6)*(k1[9]  + 2*k2[9]  + 2*k3[9]  + k4[9]);
+        b14[i] = b14[i] + (h/6)*(k1[10] + 2*k2[10] + 2*k3[10] + k4[10]);
+        a23[i] = a23[i] + (h/6)*(k1[11] + 2*k2[11] + 2*k3[11] + k4[11]);
+        b23[i] = b23[i] + (h/6)*(k1[12] + 2*k2[12] + 2*k3[12] + k4[12]);
+        a24[i] = a24[i] + (h/6)*(k1[13] + 2*k2[13] + 2*k3[13] + k4[13]);
+        b24[i] = b24[i] + (h/6)*(k1[14] + 2*k2[14] + 2*k3[14] + k4[14]);
+        a34[i] = a34[i] + (h/6)*(k1[15] + 2*k2[15] + 2*k3[15] + k4[15]);
+        b34[i] = b34[i] + (h/6)*(k1[16] + 2*k2[16] + 2*k3[16] + k4[16]);
+    
+        t = t + h;        
+    } */
+
+    return rho11[i];
+}).setOutput([N]);
+
+
+//console.log(kernel(0.5, 0, 0.5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+
+
+//escreverArquivo(path, dados)
+
+//console.log(rho11)
+
+console.log(kernel(rho11, rho22, rho33, rho44, a12, b12, a13, b13, a14, b14, a23, b23, a24, b24, a34, b34))
